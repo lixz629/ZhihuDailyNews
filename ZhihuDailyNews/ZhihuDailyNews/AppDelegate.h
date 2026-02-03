@@ -1,0 +1,14 @@
+//
+//  AppDelegate.h
+//  ZhihuDailyNews
+//
+//  Created by lxz on 2026/2/3.
+//
+
+#import <UIKit/UIKit.h>
+
+@interface AppDelegate : UIResponder <UIApplicationDelegate>
+
+
+@end
+
