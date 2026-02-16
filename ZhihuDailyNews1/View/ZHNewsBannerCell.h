@@ -17,6 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic,strong)UILabel *hintLabel;
 @property(nonatomic,strong)UILabel *titleLabel;
 @property(nonatomic,strong)SDCycleScrollView *cycleScrollView;
+@property(nonatomic,copy)void(^clickItemBlock)(NSInteger index);
 
 @end
 

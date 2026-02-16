@@ -11,11 +11,15 @@
 #import "ZHNewsBannerCell.h"
 #import "ZHNewsListCell.h"
 #import "ZHDateHeaderView.h"
+#import "ZHNewsDetailViewController.h"
+#import "Masonry.h"
+#import "MJRefresh.h"
 
-@interface ViewController ()
+@interface ViewController ()<SDCycleScrollViewDelegate>
 
 @property(nonatomic,strong)ZHLatestNewsModel *latestNewsModel;
 @property(nonatomic,strong)UICollectionView *collectionView;
+@property(nonatomic,strong)ZHDateHeaderView *headerView;
 
 @end
 
@@ -27,6 +31,11 @@
     [self loadData];
     [self collectionView];
     [self.view addSubview:self.collectionView];
+    [self headerView];
+    [self.view addSubview:self.headerView];
+    [self setUpRefresh];
+    [self.collectionView.mj_header beginRefreshing];
+    [self makeViewConstraints];
 }
 
 -(void)loadData{
@@ -37,41 +46,27 @@
         ZHLatestNewsModel *latestNewsModel = [ZHLatestNewsModel yy_modelWithJSON:responseObject];
         self.latestNewsModel = latestNewsModel;
         dispatch_async(dispatch_get_main_queue(), ^{
+            [self.headerView settingDate:self.latestNewsModel.date];
             [self.collectionView reloadData];
+            [self.collectionView.mj_header endRefreshing];
         });
-        } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
-            NSLog(@"%@",error);
-        }];
+    } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
+        NSLog(@"%@",error);
+        [self.collectionView.mj_header endRefreshing];
+    }];
 }
 
 - (UICollectionView *)collectionView{
     if(_collectionView == nil){
-        UICollectionViewCompositionalLayout *layOut = [[UICollectionViewCompositionalLayout alloc]initWithSectionProvider:^NSCollectionLayoutSection * _Nullable(NSInteger sectionIndex, id<NSCollectionLayoutEnvironment>  _Nonnull layoutEnvironment) {
-            if(sectionIndex == 0){
-                NSCollectionLayoutSize *itemSize = [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension fractionalWidthDimension:1.0] heightDimension:[NSCollectionLayoutDimension fractionalHeightDimension:1.0]];
-                NSCollectionLayoutItem *item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-                NSCollectionLayoutSize *groupSize = [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension fractionalWidthDimension:1.0] heightDimension:[NSCollectionLayoutDimension absoluteDimension:400]];
-                NSCollectionLayoutGroup *group = [NSCollectionLayoutGroup horizontalGroupWithLayoutSize:groupSize subitems:@[item]];
-                NSCollectionLayoutSection *section = [NSCollectionLayoutSection sectionWithGroup:group];
-                section.orthogonalScrollingBehavior = UICollectionLayoutSectionOrthogonalScrollingBehaviorPaging;
-                return section;
-            }
-            else{
-                NSCollectionLayoutSize *itemSize = [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension fractionalWidthDimension:1.0] heightDimension:[NSCollectionLayoutDimension absoluteDimension:96]];
-                                                    NSCollectionLayoutItem *item = [NSCollectionLayoutItem itemWithLayoutSize:itemSize];
-                NSCollectionLayoutSize *groupSize = [NSCollectionLayoutSize sizeWithWidthDimension:[NSCollectionLayoutDimension fractionalWidthDimension:1.0] heightDimension:[NSCollectionLayoutDimension absoluteDimension:104]];
-                NSCollectionLayoutGroup *group = [NSCollectionLayoutGroup verticalGroupWithLayoutSize:groupSize subitems:@[item]];
-                NSCollectionLayoutSection *section = [NSCollectionLayoutSection sectionWithGroup:group];
-                return section;
-            }
-        }];
-        _collectionView = [[UICollectionView alloc]initWithFrame:self.view.bounds collectionViewLayout:layOut];
+        UICollectionViewFlowLayout *layOut = [[UICollectionViewFlowLayout alloc]init];
+        layOut.scrollDirection = UICollectionViewScrollDirectionVertical;
+        layOut.sectionInset = UIEdgeInsetsMake(10, 10, 10, 10);
+        layOut.sectionHeadersPinToVisibleBounds = YES;
+        _collectionView = [[UICollectionView alloc]initWithFrame:CGRectZero collectionViewLayout:layOut];
         _collectionView.delegate = self;
         _collectionView.dataSource = self;
         [_collectionView registerClass:[ZHNewsBannerCell class] forCellWithReuseIdentifier:@"bannerCell"];
         [_collectionView registerClass:[ZHNewsListCell class] forCellWithReuseIdentifier:@"listCell"];
-        [_collectionView registerClass:[ZHDateHeaderView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"header"];
-        [_collectionView registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"emptyView"];
     }
     return _collectionView;
 }
@@ -93,6 +88,12 @@
         static NSString *IDb = @"bannerCell";
         ZHNewsBannerCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:IDb forIndexPath:indexPath];
         cell.bannerData = self.latestNewsModel.top_stories;
+        cell.clickItemBlock = ^(NSInteger index) {
+            ZHLatestNewsTopStories *bannerModel = self.latestNewsModel.top_stories[index];
+            ZHNewsDetailViewController *detailVc = [[ZHNewsDetailViewController alloc]init];
+            detailVc.newsID = bannerModel.id;
+            [self.navigationController pushViewController:detailVc animated:YES];
+        };
         return cell;
     }else{
         static NSString *ID = @"listCell";
@@ -104,22 +105,55 @@
 
 - (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath{
     if(indexPath.section == 0){
-        return CGSizeMake(self.view.frame.size.width, 390);
+        return CGSizeMake(self.view.frame.size.width, self.view.frame.size.width * 1.0);
     }else{
         return CGSizeMake(self.view.frame.size.width, 100);
     }
 }
 
-- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath{
-    static NSString *IDh = @"header";
-    if([kind isEqualToString:UICollectionElementKindSectionHeader] && indexPath.section == 1){
-        ZHDateHeaderView *headerView = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:IDh forIndexPath:indexPath];
-        [headerView settingDate:self.latestNewsModel.date];
-        return headerView;
-    }else{
-        UICollectionReusableView *emptyView = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"emptyView" forIndexPath:indexPath];
-        return emptyView;
+- (ZHDateHeaderView *)headerView{
+    if(_headerView == nil){
+        _headerView = [[ZHDateHeaderView alloc]init];
     }
+    return _headerView;
+}
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    ZHLatestNewsStories *storiesModel = self.latestNewsModel.stories[indexPath.row];
+    ZHNewsDetailViewController *detailVc = [[ZHNewsDetailViewController alloc]init];
+    detailVc.newsID = storiesModel.id;
+    [self.navigationController pushViewController:detailVc animated:YES];
+}
+
+-(void)makeViewConstraints{
+    [self.collectionView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.headerView.mas_bottom).offset(5);
+        make.left.right.equalTo(self.view);
+        make.bottom.equalTo(self.view.mas_bottom);
+    }];
+    [_headerView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.view);
+        make.left.right.equalTo(self.view);
+    }];
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    [self.navigationController setNavigationBarHidden:YES];
+}
+
+-(void)cycleScrollView:(SDCycleScrollView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index{
+    ZHLatestNewsTopStories *bannerModel = self.latestNewsModel.top_stories[index];
+    ZHNewsDetailViewController *detailVc = [[ZHNewsDetailViewController alloc]init];
+    detailVc.newsID = bannerModel.id;
+    [self.navigationController pushViewController:detailVc animated:YES];
+}
+
+-(void)setUpRefresh{
+    MJRefreshNormalHeader *header = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(loadData)];
+    header.lastUpdatedTimeLabel.hidden = YES;
+    header.stateLabel.hidden = YES;
+    self.collectionView.mj_header = header;
 }
 
 @end

@@ -54,4 +54,10 @@
     [innerCell refreshLayoutForce];
 }
 
+- (void)cycleScrollView:(SDCycleScrollView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index{
+    if(self.clickItemBlock){
+        self.clickItemBlock(index);
+    }
+}
+
 @end

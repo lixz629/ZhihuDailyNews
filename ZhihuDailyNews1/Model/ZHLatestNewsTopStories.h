@@ -15,6 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic,strong)NSString *url;
 @property(nonatomic,strong)NSString *image;
 @property(nonatomic,strong)NSString *title;
+@property(nonatomic,strong)NSString *id;
 
 @end
 

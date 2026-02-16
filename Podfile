@@ -8,6 +8,8 @@ target 'ZhihuDailyNews1' do
   pod 'Masonry'
   pod 'MJRefresh'
   pod 'SDCycleScrollView'
+  pod 'Ono'
+  pod 'MBProgressHUD'
 end
 
 post_install do |installer|

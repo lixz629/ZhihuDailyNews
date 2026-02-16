@@ -19,7 +19,6 @@
         UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemMaterialDark];
         self.visualEffectView = [[UIVisualEffectView alloc]initWithEffect:blurEffect];
         CAGradientLayer *maskLayer = [CAGradientLayer layer];
-        //maskLayer.frame = self.visualEffectView.bounds;
         maskLayer.colors = @[(id)[UIColor clearColor].CGColor,(id)[UIColor blackColor].CGColor];
         maskLayer.locations = @[@0.0,@0.2];
         self.visualEffectView.layer.mask = maskLayer;
